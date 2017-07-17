@@ -1,0 +1,107 @@
+public abstract class AciiFileHelper
+
+protected int nArrSz;
+protect int nLineCount = 0;
+protected int nLinesSkipped;
+protected boolean bInHeader;
+protected String strInputFile;
+protected StringBuilder strbldGlobal;
+protected SimpleDateFormat sdfDtFormat;
+
+protected abstract int notRecommended();
+
+protected abstract int processInputLine(int Count);
+
+protected in processInputBuffer(ByteBuffer bbInput, int nLinesSkip)
+{
+int nX;
+		byte bX, bY;
+		char chrX, chrY;
+		//.
+		nX = 0;
+		for(nX = 0; nX < bbInput.limit(); nX++) {
+			try {
+				bX = bbInput.get();
+				if(bX == 0x0D) { //. Carriage-Return
+					bY = bbInput.get();
+					nX++;
+					if(bY == 0x0A) { //. Line-Feed
+						this.nLineCount++;
+            if(this.bInHeader){
+            this.nLinesSkipped++;
+            if(this.nLinesSkipped >= nLinesToSkip)
+            this.bInHeader = false;
+            }
+            }
+						else {
+            processLine(this.nLineCount);
+            }
+					}
+					else {
+						chrX = (char)bX;
+						chrY = (char)bY;
+						strbldGlobal.append(chrX);
+						strbldGlobal.append(chrY);
+					}
+				}
+				else if(bX == 0x0A) { //.Line-Feed
+					bY = bbInput.get();
+					nX++;
+					if(bY == 0x0D) { //.Carriage-Return
+						this.nLineCount++;
+						processLine(this.nLineCount);
+					}
+					else {
+						chrX = (char)bX;
+						chrY = (char)bY;
+						strbldGlobal.append(chrX);
+						strbldGlobal.append(chrY);
+					}
+				}
+				else {
+					chrX = (char)bX;
+					strbldGlobal.append(chrX);
+				}
+			}
+			catch(Exception excpX) {
+				System.out.println("ARLTLogAnalyzer::processBuffer -> " + excpX.toString() + " : bbInput( " + nX + " )");
+			}
+		}
+		return(nX);
+    }
+    
+    protected int processInputFile(String strInputFile, int nLinesToSkip)
+    {
+    int nW, nX, nY;
+		ByteBuffer bbBuffX;
+		FileChannel fcInput;
+		RandomAccessFile rafInput;
+		//.
+		nX = nY = 0;
+    this.nLinesSkipped = 0;
+    if(nLinesSkipped > 0)
+    {
+    this.bInHeader = true;
+    }
+    else {
+    this.bInHeader = false;
+    }
+		nW = 5 * 1024 * 1024; //. Five MB
+		try {
+			rafInput = new RandomAccessFile(strInput, "r");
+			fcInput = rafInput.getChannel();
+			bbBuffX = ByteBuffer.allocate(nW);
+			while(fcInput.read(bbBuffX) > 0) {
+				nY++;
+				bbBuffX.flip();
+				nX = processInputBuffer(bbBuffX, nLinesToSkip);
+				bbBuffX.clear();
+			}
+			fcInput.close();
+			rafInput.close();
+		}
+		catch(Exception excpX) {
+			System.out.println("ARLTLogAnalyzer::initSequence -> " + excpX.toString());
+		}
+		return(nY);
+    }
